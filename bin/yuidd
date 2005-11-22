@@ -12,6 +12,7 @@ use constant DEFAULT_PORT => 9001;
 
 our $Debug = 0;
 our $Generator;
+our %Stats;
 
 GetOptions(
         'daemon|d'      => \my($daemonize),
@@ -22,6 +23,7 @@ GetOptions(
 $port ||= DEFAULT_PORT;
 
 $Generator = Data::YUID::Generator->new($host_id);
+$Stats{started} = time;
 
 daemonize() if $daemonize;
 
@@ -80,7 +82,7 @@ sub daemonize {
 
 package Data::YUID::Server::Client;
 use base qw( Danga::Socket );
-use URI::Escape ();
+use URI::Escape;
 
 use fields qw( read_buf );
 
@@ -112,7 +114,7 @@ sub process_line {
         my($cmd, $args) = ($1, $2);
         $cmd = lc $cmd;
 
-        if (my $meth = $client->can('cmd_' . $cmd)) {
+        if (my $meth = $client->can('CMD_' . $cmd)) {
             $meth->($client, decode_args($args));
             return 1;
         }
@@ -121,18 +123,39 @@ sub process_line {
     return $client->err_line('unknown_command');
 }
 
-sub cmd_getid {
+sub CMD_getid {
     my Data::YUID::Server::Client $client = shift;
     my($args) = @_;
     my $id = $Generator->get_id($args->{ns})
         or return $client->err_line('too_many');
-    return $client->id_line($id);
+    $Stats{count}{total}++;
+    return $client->ok_line({ id => $id });
 }
 
-sub id_line {
+sub CMD_stats {
     my Data::YUID::Server::Client $client = shift;
-    my($id) = @_;
-    $client->write("ID $id\r\n");
+    return $client->ok_line({
+        total_given => $Stats{count}{total} || 0,
+        started     => $Stats{started},
+    });
+}
+
+sub CMD_ping {
+    my Data::YUID::Server::Client $client = shift;
+    return $client->ok_line;
+}
+
+sub CMD_shutdown {
+    exit 0;
+}
+
+sub ok_line {
+    my Data::YUID::Server::Client $client = shift;
+    my($args) = @_;
+    my $argline = join ' ',
+                  map uri_escape($_) . '=' . uri_escape($args->{$_}),
+                  keys %$args;
+    $client->write("OK $argline\r\n");
     return 1;
 }
 
@@ -149,7 +172,7 @@ sub decode_args {
     for my $pair (split /\s+/, $str) {
         my($name, $val) = split /=/, $pair;
         for ($name, $val) {
-            $_ = URI::Escape::uri_unescape($_);
+            $_ = uri_unescape($_);
         }
         $args->{$name} = $val;
     }

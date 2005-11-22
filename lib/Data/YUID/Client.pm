@@ -106,7 +106,7 @@ sub get_id {
     while (!$id && (my $sock = $client->get_sock)) {
         my $cmd = sprintf "getid ns=%s\r\n", URI::Escape::uri_escape($ns || '');
         my $res = $client->_oneline($sock, $cmd) or next;
-        ($id) = $res =~ /^id\s+(\d+)/i;
+        ($id) = $res =~ /^ok\s+id=(\d+)/i;
     }
     $id;
 }
