@@ -5,7 +5,7 @@ use Data::YUID::Client;
 use File::Spec;
 use FindBin qw( $Bin );
 use IO::Socket::INET;
-use Test::More tests => 3;
+use Test::More tests => 25;
 
 use constant PORT => 11000;
 our %Children;
@@ -25,10 +25,24 @@ my $client = Data::YUID::Client->new(
 isa_ok($client, 'Data::YUID::Client');
 
 my $id1 = $client->get_id;
-ok($id1);
+isgoodid($id1);
 
 my $id2 = $client->get_id;
-isnt($id1, $id2);
+isgoodid($id2);
+
+## Kill off all but one of the servers we've started, then try
+## to get an ID. Try it 10 times, to make sure we're not just getting
+## lucky and hitting the running server.
+my @pids = grep $Children{$_} eq 'S', keys %Children;
+kill INT => @pids[1..$#pids];
+isgoodid($client->get_id) for 1..10;
+
+my %Seen;
+sub isgoodid {
+    my($id) = @_;
+    ok($id, 'The ID ' . $id . ' is non-0');
+    ok(!$Seen{$id}++, 'The ID ' . $id . ' has not been seen before');
+}
 
 sub start_server {
     my($port) = @_;
