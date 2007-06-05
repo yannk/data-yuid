@@ -3,7 +3,7 @@
 package Data::YUID::Client;
 use strict;
 
-use fields qw( servers select_timeout );
+use fields qw( servers select_timeout hosts );
 use Carp;
 use Errno qw( EINPROGRESS EWOULDBLOCK EISCONN );
 use IO::Socket::INET;
@@ -15,8 +15,7 @@ use constant DEFAULT_PORT => 9001;
 our $FLAG_NOSIGNAL = 0;
 eval { $FLAG_NOSIGNAL = MSG_NOSIGNAL };
 
-my %sock_cache = ();
-my %sock2host = ();
+my $Active_Sock;
 
 sub new {
     my Data::YUID::Client $client = shift;
@@ -27,8 +26,8 @@ sub new {
         unless !exists $args{servers} || ref $args{servers} eq 'ARRAY';
     $client->{servers} = $args{servers} || [];
     $client->{select_timeout} = 1.0;
+    $client->{hosts} = $args{servers};
 
-    $client->connect_to_servers;
     $client;
 }
 
@@ -113,19 +112,14 @@ sub get_id {
 
 sub _close_sock {
     my($sock) = @_;
-    my $host = delete $sock2host{fileno $sock};
+    undef $Active_Sock 
+        if ($Active_Sock && fileno($sock) == fileno($Active_Sock));
     close $sock;
-    delete $sock_cache{$host};
 }
 
-sub connect_to_servers {
-    my Data::YUID::Client $client = shift;
-    for my $host (@{ $client->{servers} }) {
-        my $sock = $client->connect_to_server($host)
-            or next;
-        $sock_cache{$host} = $sock;
-        $sock2host{fileno $sock} = $host;
-    }
+#class method, for request cleanup
+sub close_active_sock {
+    close $Active_Sock;
 }
 
 sub connect_to_server {
@@ -146,9 +140,14 @@ sub connect_to_server {
 
 sub get_sock {
     my Data::YUID::Client $client = shift;
-    my @hosts = keys %sock_cache or return;
-    my $host = $hosts[ int rand @hosts ];
-    $sock_cache{$host};
+
+    if (my $sock = $Active_Sock) {
+        return $sock;
+    }else{
+        my $hosts = $client->{hosts};
+        my $host = splice(@$hosts, int(rand(@$hosts)), 1) || return undef;
+        return $Active_Sock = $client->connect_to_server($host);
+    }
 }
 
 1;
@@ -192,15 +191,20 @@ A reference to a list of server addresses, in I<host:port> notation. These
 should point to the locations of servers running the F<yuidd> server using
 the client/server protocol for ID generation.
 
-I<new> will attempt to connect to each of the servers and will cache the
-connections internally.
+New Behavior: the original version of this would create a connection
+to every server at C<new()> and cache them all.  This version
+creates only one connection, when the first YUID is requested, and
+caches that connection.  If the connection goes bad, it'll try other servers
+it its list until one works or until it has worked through the list.
 
 =back
 
 =head2 $client->get_id([ $namespace ])
 
 Obtains a unique ID from one of the servers, in the optional namespace
-I<$namespace>.
+I<$namespace>.  
+
+Returns undef if it can't get an ID from any server.
 
 =head1 AUTHOR & COPYRIGHT
 
