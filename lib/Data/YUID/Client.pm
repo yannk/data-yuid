@@ -16,6 +16,8 @@ our $FLAG_NOSIGNAL = 0;
 eval { $FLAG_NOSIGNAL = MSG_NOSIGNAL };
 
 my $Active_Sock;
+my $Socket_Used_Count = 0; #yuids served per socket before we refresh it, to force rebalancing
+my $Max_Socket_Reused = 1000 + rand(1000);
 
 sub new {
     my Data::YUID::Client $client = shift;
@@ -64,7 +66,7 @@ sub _oneline {
             $res = send($sock, $line, $FLAG_NOSIGNAL);
             next
                 if not defined $res and $!==EWOULDBLOCK;
-            unless ($res > 0) {
+            unless (($res || 0) > 0) {
                 _close_sock($sock);
                 return undef;
             }
@@ -141,7 +143,9 @@ sub connect_to_server {
 sub get_sock {
     my Data::YUID::Client $client = shift;
 
-    if ($Active_Sock && $Active_Sock->connected) {
+    ++$Socket_Used_Count;
+
+    if ($Active_Sock && $Active_Sock->connected && ($Socket_Used_Count % $Max_Socket_Reused != 0)) {
         return $Active_Sock;
     }else{
         my $hosts = $client->{hosts};
