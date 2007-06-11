@@ -141,12 +141,18 @@ sub connect_to_server {
 sub get_sock {
     my Data::YUID::Client $client = shift;
 
-    if (my $sock = $Active_Sock) {
-        return $sock;
+    if ($Active_Sock && $Active_Sock->connected) {
+        return $Active_Sock;
     }else{
         my $hosts = $client->{hosts};
-        my $host = splice(@$hosts, int(rand(@$hosts)), 1) || return undef;
-        return $Active_Sock = $client->connect_to_server($host);
+        my @try_hosts = @$hosts;
+        my $sock;
+        while (@try_hosts){
+            my $host = splice(@try_hosts, int(rand(@try_hosts)), 1);
+            $sock = $client->connect_to_server($host);
+            last if $sock;
+        }
+        return $Active_Sock = $sock;
     }
 }
 
