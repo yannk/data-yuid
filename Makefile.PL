@@ -2,7 +2,7 @@
 
 use Config;
 BEGIN {
-    die "A 64-bit Perl is required"
+    warn "A 64-bit Perl is highly recommended"
         unless $Config{use64bitint};
 }
 
@@ -20,6 +20,9 @@ include('ExtUtils::AutoInstall');
 
 requires('Danga::Socket');
 requires('URI::Escape');
+unless ($Config{use64bitint}) {
+    requires('Math::BigInt');
+}
 
 install_script('bin/yuidd');
 

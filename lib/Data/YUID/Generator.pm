@@ -7,8 +7,10 @@ no warnings qw(deprecated); # for fields
 
 use vars qw{$VERSION};
 $VERSION = "0.01";
+use Carp;
+use Config;
 
-use fields qw(host_id start_time current_time min_id max_id ids);
+use fields qw(host_id start_time current_time min_id max_id ids make_id);
 
 use constant EPOCH_OFFSET => 946684800; # Sat, Jan 1 2000 00:00 GMT
 
@@ -27,6 +29,13 @@ use constant TIME_MAX_SHIFTED => TIME_MAX << TIME_SHIFT;
 use constant SERIAL_MAX => (1 << SERIAL_BITS) - 1;
 use constant SERIAL_MAX_SHIFTED => SERIAL_MAX << SERIAL_SHIFT;
 
+BEGIN {
+    use Config;
+    unless ($Config{use64bitint}) {
+        eval "use Math::BigInt; 1;"
+            or croak "Please install Math::BigInt";
+    }
+};
 
 sub new {
     my Data::YUID::Generator $self = shift;
@@ -44,6 +53,13 @@ sub new {
     $self->{ start_time } = time;
     $self->{ current_time } = 0;
     $self->{ ids } = {};
+    if ($Config{use64bitint}) {
+        $self->{make_id} = sub { $self->_make_id_64bits(@_) };
+    }
+    else {
+        $self->{make_id} = sub { $self->_make_id_32bits(@_) };
+    }
+
     $self->_sync();
     
     return $self;
@@ -55,19 +71,26 @@ sub _sync {
     my $time = time;
     return if( $self->{ current_time } == $time ); # FIXME: check for clock skew
     $self->{ current_time } = $time;
-    $self->{ min_id } = $self->_make_id( 0 ) unless( $self->{ min_id } );
-    $self->{ max_id } = $self->_make_id( SERIAL_MAX );
+    $self->{ min_id } = $self->{make_id}->( 0 ) unless( $self->{ min_id } );
+    $self->{ max_id } = $self->{make_id}->( SERIAL_MAX );
 }
 
 
-sub _make_id ($) {
+sub _make_id_64bits ($) {
     my $self = shift;
     my $serial = shift || 0;
     return (($self->{ current_time } - EPOCH_OFFSET) << TIME_SHIFT) |
         ($serial << SERIAL_SHIFT) | $self->{ host_id };
-        
 }
 
+sub _make_id_32bits ($) {
+    my $self = shift;
+    my $serial = shift || 0;
+    my $id = Math::BigInt->new($self->{ current_time } - EPOCH_OFFSET);
+    return $id->blsft(TIME_SHIFT)
+              ->bior(Math::BigInt->new($serial)->blsft(SERIAL_SHIFT))
+              ->bior($self->{ host_id });
+}
 
 sub get_id ($) {
     my $self = shift;
