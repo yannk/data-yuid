@@ -11,7 +11,7 @@ use inc::Module::Install;
 name('Data-YUID');
 abstract('Distributed unique ID allocator');
 author('Six Apart <cpan@sixapart.com>');
-version_from('lib/Data/YUID.pm');
+all_from('lib/Data/YUID.pm');
 license('perl');
 no_index(directory => 't');
 sign(0);
@@ -26,7 +26,9 @@ unless ($Config{use64bitint}) {
 
 install_script('bin/yuidd');
 
+githubmeta;
+
 auto_include();
 auto_install();
 
-&WriteAll;
+WriteAll;

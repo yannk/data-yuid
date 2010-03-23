@@ -3,7 +3,8 @@
 package Data::YUID;
 use strict;
 
-our $VERSION = '0.03';
+use 5.006.001;
+our $VERSION = '0.04';
 
 1;
 __END__
