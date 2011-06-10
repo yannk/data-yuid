@@ -40,7 +40,7 @@ BEGIN {
 sub new {
     my Data::YUID::Generator $self = shift;
     $self = fields::new( $self ) unless ref $self;
-    
+
     my $host_id = shift;
     if( !$host_id ) {
         $host_id = int( rand( HOST_ID_MAX ) );
@@ -48,7 +48,7 @@ sub new {
         warn __PACKAGE__ . ": host ID $host_id is not in range of [0," . HOST_ID_MAX . "]\n";
         return undef;
     }
-    
+
     $self->{ host_id } = $host_id;
     $self->{ start_time } = time;
     $self->{ current_time } = 0;
@@ -61,7 +61,7 @@ sub new {
     }
 
     $self->_sync();
-    
+
     return $self;
 }
 
@@ -96,15 +96,15 @@ sub get_id ($) {
     my $self = shift;
     my $key = shift || "_";
     $self->_sync();
-    
+
     if( !exists $self->{ ids }->{ $key } ) {
         $self->{ ids }->{ $key } = $self->{ min_id };
         return $self->{ ids }->{ $key };
     }
-    
+
     return undef
         if( $self->{ ids }->{ $key } >= $self->{ max_id } );
-    
+
     $self->{ ids }->{ $key } += SERIAL_INCREMENT;
     return $self->{ ids }->{ $key };
 }

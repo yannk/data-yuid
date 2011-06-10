@@ -40,11 +40,11 @@ It generates IDs with temporal and spatial uniqueness. These IDs are less
 universally unique than Type-1 UUIDs, because they have only 64 bits of
 usable ID space split up between the various parts. Currently, ID
 generation uses this split:
- 
+
 16 bits of host ID (akin to a locally provisioned MAC address)
 36 bits of time in seconds since the epoch (currently Jan 1 2000 00:00 GMT)
 12 bits of serial incrementor
- 
+
 Given the following restrictions, a YUID generator will generate guaranteed
 globally (within your control) unique IDs:
 
@@ -55,7 +55,7 @@ globally (within your control) unique IDs:
 =item 2. for a given ID namespace, no more than (T - S) * (2^12) IDs have been generated, where T = current time and S = start time of generator
 
 =back
- 
+
 The size of the incrementor is dependent on the rate of request. For IDs
 with a short lifetime but high request rate, you could use fewer time bits
 and more serial bits.

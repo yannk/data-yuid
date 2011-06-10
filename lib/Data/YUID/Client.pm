@@ -121,7 +121,7 @@ sub get_id {
 
 sub _close_sock {
     my($sock) = @_;
-    undef $Active_Sock 
+    undef $Active_Sock
         if ($Active_Sock && fileno($sock) == fileno($Active_Sock));
     close $sock;
 }
@@ -235,7 +235,7 @@ it waits forever (not really advised).
 =head2 $client->get_id([ $namespace ])
 
 Obtains a unique ID from one of the servers, in the optional namespace
-I<$namespace>.  
+I<$namespace>.
 
 Returns undef if it can't get an ID from any server.
 
