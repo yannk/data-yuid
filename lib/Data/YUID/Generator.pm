@@ -14,10 +14,13 @@ use fields qw(host_id start_time current_time min_id max_id ids make_id);
 
 use constant EPOCH_OFFSET => 946684800; # Sat, Jan 1 2000 00:00 GMT
 
+## |             timestamp             |   serial   |      host     |
+## |              36 bits              |     12     |       16      |
 use constant HOST_ID_BITS => 16;
 use constant TIME_BITS => 36;
 use constant SERIAL_BITS => 64 - HOST_ID_BITS - TIME_BITS;
 
+use constant HOST_SHIFT => HOST_ID_BITS;
 use constant TIME_SHIFT => HOST_ID_BITS + SERIAL_BITS;
 use constant SERIAL_SHIFT => HOST_ID_BITS;
 
@@ -29,6 +32,7 @@ use constant TIME_MAX_SHIFTED => TIME_MAX << TIME_SHIFT;
 use constant SERIAL_MAX => (1 << SERIAL_BITS) - 1;
 use constant SERIAL_MAX_SHIFTED => SERIAL_MAX << SERIAL_SHIFT;
 
+use constant HOST_MAX => (1 << HOST_ID_BITS) - 1;
 BEGIN {
     use Config;
     unless ($Config{use64bitint}) {
@@ -109,5 +113,15 @@ sub get_id ($) {
     return $self->{ ids }->{ $key };
 }
 
+## deconstruct an id in its composing part, using id order:
+## (ts, serial, host)
+sub decompose {
+    my $class = shift;
+    my $id = shift;
+    my $ts     =   $id >> TIME_SHIFT;
+    my $serial = ( $id >> HOST_SHIFT ) & SERIAL_MAX;
+    my $host   =   $id  & HOST_MAX;
+    return ($ts, $serial, $host);
+}
 
 1;

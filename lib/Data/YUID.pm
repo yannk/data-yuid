@@ -2,9 +2,37 @@
 
 package Data::YUID;
 use strict;
+use warnings;
+use Data::YUID::Generator;
 
 use 5.006.001;
 our $VERSION = '0.04';
+
+sub debug_id {
+    my $class = shift;
+    my $id = shift;
+    return "timestamp:~ serial:~ host:~" unless defined $id;
+    my $f = shift || "0x\%x";
+    return sprintf "timestamp:$f serial:$f host:$f", $class->_id_parts($id);
+}
+
+sub _id_parts {
+    Data::YUID::Generator->decompose($_[1]);
+}
+
+sub timestamp {
+    my @parts = shift->_id_parts(@_);
+    return $parts[0];
+}
+
+sub serial {
+    my @parts = shift->_id_parts(@_);
+    return $parts[1];
+}
+sub host {
+    my @parts = shift->_id_parts(@_);
+    return $parts[2];
+}
 
 1;
 __END__
@@ -29,6 +57,14 @@ Data::YUID - Distributed ID generator ("Yet another Unique ID")
             ],
         );
     my $id = $client->get_id;
+
+    ## some utilities (useful for debugging)
+    my $id = $generator->get_id;
+    say Data::YUID->as_string($id);
+    # timestamp:15855749 serial:ffc host:fbdd
+    say Data::YUID->host($id);
+    say Data::YUID->timestamp($id);
+    say Data::YUID->serial($id);
 
 =head1 DESCRIPTION
 
