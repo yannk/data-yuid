@@ -56,7 +56,7 @@ sub start_child {
     my $pid = fork();
     die $! unless defined $pid;
     unless ($pid) {
-        exec 'perl', '-Iblib/lib', '-Ilib', @$cmd or die $!;
+        exec $^X, '-Iblib/lib', '-Ilib', @$cmd or die $!;
     }
     $pid;
 }
