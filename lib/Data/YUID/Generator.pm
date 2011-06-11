@@ -72,11 +72,13 @@ sub new {
 
 sub _sync {
     my $self = shift;
+    my $key = shift;
     my $time = time;
     return if( $self->{ current_time } == $time ); # FIXME: check for clock skew
     $self->{ current_time } = $time;
-    $self->{ min_id } = $self->{make_id}->( 0 ) unless( $self->{ min_id } );
+    $self->{ min_id } = $self->{make_id}->( 0 );
     $self->{ max_id } = $self->{make_id}->( SERIAL_MAX );
+    delete $self->{ ids }->{ $key } if $key; ## reset current timestamp
 }
 
 
@@ -99,7 +101,7 @@ sub _make_id_32bits ($) {
 sub get_id ($) {
     my $self = shift;
     my $key = shift || "_";
-    $self->_sync();
+    $self->_sync($key);
 
     if( !exists $self->{ ids }->{ $key } ) {
         $self->{ ids }->{ $key } = $self->{ min_id };

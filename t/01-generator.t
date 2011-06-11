@@ -65,10 +65,7 @@ use Time::HiRes;
     my $id = $gen->get_id;
     if (! $id) {
         is $id, undef, "serial exhausted $prev_ts";
-        (undef, my $us) = Time::HiRes::gettimeofday;
-        my $diff = 1_000_000 - $us + 1;
-        diag "sleeping until next sec ($diff µs)";
-        Time::HiRes::usleep($diff);
+        sleep_to_next_sec();
     }
     else {
         my $ts = Data::YUID->timestamp($id);
@@ -79,4 +76,21 @@ use Time::HiRes;
     isnt $id, undef, "can generate ids again $ts";
 }
 
+## check that timestamp is increment at every second
+{
+    my $gen = Data::YUID::Generator->new;
+    my $id = $gen->get_id;
+    my $ts = Data::YUID->timestamp($id);
+    sleep_to_next_sec();
+    my $id2 = $gen->get_id;
+    my $ts2 = Data::YUID->timestamp($id2);
+    is $ts2, $ts + 1, "this is next sec $ts vs $ts2";
+}
+
+sub sleep_to_next_sec {
+    (undef, my $us) = Time::HiRes::gettimeofday;
+    my $diff = 1_000_000 - $us + 1;
+    diag "sleeping until next sec ($diff µs)";
+    Time::HiRes::usleep($diff);
+}
 #done_testing();
