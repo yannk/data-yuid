@@ -2,9 +2,37 @@
 
 package Data::YUID;
 use strict;
+use warnings;
+use Data::YUID::Generator;
 
 use 5.006.001;
 our $VERSION = '0.04';
+
+sub debug_id {
+    my $class = shift;
+    my $id = shift;
+    return "timestamp:~ serial:~ host:~" unless defined $id;
+    my $f = shift || "0x\%x";
+    return sprintf "timestamp:$f serial:$f host:$f", $class->_id_parts($id);
+}
+
+sub _id_parts {
+    Data::YUID::Generator->decompose($_[1]);
+}
+
+sub timestamp {
+    my @parts = shift->_id_parts(@_);
+    return $parts[0];
+}
+
+sub serial {
+    my @parts = shift->_id_parts(@_);
+    return $parts[1];
+}
+sub host {
+    my @parts = shift->_id_parts(@_);
+    return $parts[2];
+}
 
 1;
 __END__
@@ -30,6 +58,14 @@ Data::YUID - Distributed ID generator ("Yet another Unique ID")
         );
     my $id = $client->get_id;
 
+    ## some utilities (useful for debugging)
+    my $id = $generator->get_id;
+    say Data::YUID->as_string($id);
+    # timestamp:15855749 serial:ffc host:fbdd
+    say Data::YUID->host($id);
+    say Data::YUID->timestamp($id);
+    say Data::YUID->serial($id);
+
 =head1 DESCRIPTION
 
 I<Data::YUID> ("Yet another Unique ID") is an ID allocation engine that can
@@ -40,11 +76,11 @@ It generates IDs with temporal and spatial uniqueness. These IDs are less
 universally unique than Type-1 UUIDs, because they have only 64 bits of
 usable ID space split up between the various parts. Currently, ID
 generation uses this split:
- 
+
 16 bits of host ID (akin to a locally provisioned MAC address)
 36 bits of time in seconds since the epoch (currently Jan 1 2000 00:00 GMT)
 12 bits of serial incrementor
- 
+
 Given the following restrictions, a YUID generator will generate guaranteed
 globally (within your control) unique IDs:
 
@@ -55,7 +91,7 @@ globally (within your control) unique IDs:
 =item 2. for a given ID namespace, no more than (T - S) * (2^12) IDs have been generated, where T = current time and S = start time of generator
 
 =back
- 
+
 The size of the incrementor is dependent on the rate of request. For IDs
 with a short lifetime but high request rate, you could use fewer time bits
 and more serial bits.

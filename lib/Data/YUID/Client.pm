@@ -3,7 +3,7 @@
 package Data::YUID::Client;
 use strict;
 
-use fields qw( servers select_timeout hosts );
+use fields qw( servers select_timeout hosts connect_timeout );
 use Carp;
 use Errno qw( EINPROGRESS EWOULDBLOCK EISCONN );
 use IO::Socket::INET;
@@ -11,6 +11,10 @@ use Socket qw( MSG_NOSIGNAL );
 use URI::Escape ();
 
 use constant DEFAULT_PORT => 9001;
+use constant DEFAULT_TIMEOUT => {
+    connect => 1.0, # seconds
+    select  => 1.0, # seconds
+};
 
 our $FLAG_NOSIGNAL = 0;
 eval { $FLAG_NOSIGNAL = MSG_NOSIGNAL };
@@ -27,7 +31,10 @@ sub new {
     croak "servers must be an arrayref if specified"
         unless !exists $args{servers} || ref $args{servers} eq 'ARRAY';
     $client->{servers} = $args{servers} || [];
-    $client->{select_timeout} = 1.0;
+    for (qw(select_timeout connect_timeout)) {
+        my $value = exists $args{$_} ? $args{$_} : DEFAULT_TIMEOUT->{$_};
+        $client->{$_} = $value;
+    }
     $client->{hosts} = $args{servers};
 
     $client;
@@ -114,7 +121,7 @@ sub get_id {
 
 sub _close_sock {
     my($sock) = @_;
-    undef $Active_Sock 
+    undef $Active_Sock
         if ($Active_Sock && fileno($sock) == fileno($Active_Sock));
     close $sock;
 }
@@ -136,6 +143,7 @@ sub connect_to_server {
             Type            => SOCK_STREAM,
             ReuseAddr       => 1,
             Blocking        => 0,
+            Timeout         => $client->{connect_timeout},
         ) or return;
     $sock;
 }
@@ -175,6 +183,8 @@ Data::YUID::Client - Client for distributed YUID generation
                 '192.168.100.4:11001',
                 '192.168.100.5:11001',
             ],
+            connect_timeout => 1.0, # seconds
+            select_timeout  => 1.0, # seconds
         );
     my $id = $client->get_id;
 
@@ -207,12 +217,25 @@ creates only one connection, when the first YUID is requested, and
 caches that connection.  If the connection goes bad, it'll try other servers
 it its list until one works or until it has worked through the list.
 
+=item * connect_timeout
+
+Number of seconds (can be fractional) to wait for a valid connection to the
+server. It defaults to C<1.0> if the option is left out. If the value is
+C<undef> then it basically waits forever (one of the previous behaviour
+of this library.
+
+=item * select_timeout
+
+Number of seconds (can be fractional) for the select() on the server socket.
+It defaults to C<1.0> if the option is left out. If the value is C<undef> then
+it waits forever (not really advised).
+
 =back
 
 =head2 $client->get_id([ $namespace ])
 
 Obtains a unique ID from one of the servers, in the optional namespace
-I<$namespace>.  
+I<$namespace>.
 
 Returns undef if it can't get an ID from any server.
 

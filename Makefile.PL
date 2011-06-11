@@ -20,6 +20,7 @@ include('ExtUtils::AutoInstall');
 
 requires('Danga::Socket');
 requires('URI::Escape');
+test_requires('Time::HiRes');
 unless ($Config{use64bitint}) {
     requires('Math::BigInt');
 }
