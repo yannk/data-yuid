@@ -13,6 +13,7 @@ inc/Module/Install/Metadata.pm
 inc/Module/Install/Scripts.pm
 inc/Module/Install/Win32.pm
 inc/Module/Install/WriteAll.pm
+inc/Time/HiRes.pm
 lib/Data/YUID.pm
 lib/Data/YUID/Client.pm
 lib/Data/YUID/Generator.pm
