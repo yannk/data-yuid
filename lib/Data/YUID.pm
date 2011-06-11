@@ -6,7 +6,7 @@ use warnings;
 use Data::YUID::Generator;
 
 use 5.006.001;
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 sub debug_id {
     my $class = shift;

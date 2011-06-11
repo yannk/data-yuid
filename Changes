@@ -1,6 +1,12 @@
-$Id$
-
 Revision history for Data::YUID
+
+0.06 2011-06-11
+    - Fixed sequence generation to reset timestamp every second, thus
+      fixing out of order sequences for 2+ servers (at the second
+      granularity).
+    - Added timeout configurations
+    - Added more tools, tests and documentation
+    - Fixed RT#68215 $^X in tests (ANDK)
 
 0.04
     - Added 32bits Perl support
